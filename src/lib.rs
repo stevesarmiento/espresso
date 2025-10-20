@@ -1,14 +1,11 @@
 #![deny(missing_docs)]
-//! High-throughput Solana backfilling and research runner built on Jetstreamer firehose
-//! plugins.
-//!
-//! # Overview
-//! Jetstreamer streams historical Solana ledger data directly from Project Yellowstone's [Old
-//! Faithful](https://old-faithful.net/) archive — a complete collection of every transaction
-//! from genesis to the current chain tip. With adequate hardware and bandwidth, Jetstreamer
-//! can sustain well over 2.7 million transactions per second of replay throughput streaming
-//! historical Old Faithful data to your local plugins or consumers for analysis and/or
-//! backfilling.
+//! Jetstreamer is a high-throughput Solana backfilling and research toolkit designed to stream
+//! historical chain data live over the network from Project Yellowstone's [Old
+//! Faithful](https://old-faithful.net/) archive, which is a comprehensive open source archive
+//! of all Solana blocks and transactions from genesis to the current tip of the chain. Given
+//! the right hardware and network connection, Jetstreamer can stream data at over 2.7M TPS to
+//! a local Jetstreamer plugin or geyser plugin. Higher speeds are possible with better
+//! hardware (in our case 64 core CPU, 30 Gbps+ network for the 2.7M TPS record).
 //!
 //! ## Components
 //! - [`firehose`] exposes the underlying streaming primitives and async helpers for

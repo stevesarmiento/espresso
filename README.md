@@ -8,9 +8,11 @@
 
 Jetstreamer is a high-throughput Solana backfilling and research toolkit designed to stream
 historical chain data live over the network from Project Yellowstone's [Old
-Faithful](https://old-faithful.net/) archive which is a comprehensive open source archive of
-all Solana blocks and transactions from genesis to the current tip of the chain. Jetstreamer
-can stream data at over 2.7M TPS with the right hardware and network connection. 
+Faithful](https://old-faithful.net/) archive, which is a comprehensive open source archive of
+all Solana blocks and transactions from genesis to the current tip of the chain. Given the
+right hardware and network connection, Jetstreamer can stream data at over 2.7M TPS to a local
+Jetstreamer plugin or geyser plugin. Higher speeds are possible with better hardware (in our
+case 64 core CPU, 30 Gbps+ network for the 2.7M TPS record).
 
 Jetstreamer exposes three companion crates:
 
