@@ -1,0 +1,27 @@
+[package]
+name = "jetstreamer-utils"
+description = "Support crate for Jetstreamer containing utility functions, types, and ClickHouse integration"
+keywords.workspace = true
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[lib]
+name = "jetstreamer_utils"
+
+[[bin]]
+name = "clickhouse-server"
+path = "src/clickhouse_server_bin.rs"
+
+[[bin]]
+name = "clickhouse-client"
+path = "src/clickhouse_client_bin.rs"
+
+[dependencies]
+tokio.workspace = true
+log.workspace = true
+tempfile.workspace = true
+libc.workspace = true
+solana-logger.workspace = true
+ctrlc.workspace = true

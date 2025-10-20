@@ -1,16 +1,26 @@
 [workspace]
-members = ["jetstreamer-firehose", "jetstreamer-geyser-plugin", "jetstreamer-build-cdylib", "jetstreamer-plugin"]
+members = ["jetstreamer-firehose", "jetstreamer-plugin", "jetstreamer-utils"]
+
+[workspace.package]
+edition = "2024"
+version = "0.1.0"
+authors = ["sam0x17", "anza-team"]
+license = "MIT OR Apache-2.0"
+keywords = ["solana", "geyser", "jetstreamer", "firehose", "transaction"]
 
 [package]
 name = "jetstreamer"
-version = "0.1.0"
-edition = "2024"
-authors = ["sam0x17"]
+description = "High-throughput Solana transaction ledger streaming and plugin framework suitable for research and backfilling"
+keywords.workspace = true
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+license.workspace = true
 
 [workspace.dependencies]
 jetstreamer-firehose = { path = "jetstreamer-firehose", version = "0.1.0" }
-jetstreamer-geyser-plugin = { path = "jetstreamer-geyser-plugin", version = "0.1.0" }
 jetstreamer-plugin = { path = "jetstreamer-plugin", version = "0.1.0" }
+jetstreamer-utils = { path = "jetstreamer-utils", version = "0.1.0" }
 tokio = { version = "1", features = ["full"] }
 futures-util = "0"
 futures = "0"
@@ -62,6 +72,8 @@ tokio-stream = { version = "0", features = ["full"] }
 rangemap = "1"
 rseek = ">= 0.2"
 rayon = "1"
+xxhash-rust = { version = "0.8", features = ["xxh64"] }
+dashmap = "5"
 clickhouse = { version = ">= 0.13", features = ["uuid", "time", "lz4", "watch", "inserter"] }
 interprocess = { version = "2", features = ["tokio"] }
 ctrlc = "3"
@@ -70,20 +82,15 @@ tempfile = "3"
 libc = "0"
 
 [dependencies]
-tempfile.workspace = true
-serde_json.workspace = true
 tokio.workspace = true
 solana-logger.workspace = true
 log.workspace = true
-reqwest.workspace = true
 jetstreamer-firehose.workspace = true
 jetstreamer-plugin.workspace = true
+jetstreamer-utils.workspace = true
 
-[build-dependencies]
-jetstreamer-build-cdylib = { path = "jetstreamer-build-cdylib", version = "0.1.0", features = ["link-jetstreamer"] }
-
-[features]
-plugin-runner = ["jetstreamer-build-cdylib/plugin-runner"]
+[dev-dependencies]
+clickhouse.workspace = true
 
 [profile.release]
 lto = true

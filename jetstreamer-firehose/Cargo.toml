@@ -1,10 +1,11 @@
 [package]
 name = "jetstreamer-firehose"
-version = "0.1.0"
-edition = "2024"
-authors = ["sam0x17"]
-license = "MIT"
-description = "A utility that allows replaying ranges of Solana blocks, even back to genesis, over a geyser plugin using Old Faithful"
+description = "Support crate for Jetstreamer containing firehose ingestion engine and core abstractions"
+keywords.workspace = true
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+license.workspace = true
 default-run = "jetstreamer-firehose"
 
 [features]
@@ -15,13 +16,8 @@ verify-transaction-signatures = []
 name = "jetstreamer-firehose"
 path = "src/main.rs"
 
-[[bin]]
-name = "build-index"
-path = "src/index_bin.rs"
-
 [dependencies]
 crossbeam-channel.workspace = true
-agave-geyser-plugin-interface.workspace = true
 solana-rpc.workspace = true
 solana-runtime.workspace = true
 solana-sdk.workspace = true
@@ -35,8 +31,6 @@ reqwest.workspace = true
 tokio.workspace = true
 futures-util.workspace = true
 serde = { workspace = true, features = ["derive"] }
-anyhow.workspace = true
-rangemap.workspace = true
 thiserror.workspace = true
 cid.workspace = true
 multihash.workspace = true
@@ -48,11 +42,13 @@ rseek.workspace = true
 crc.workspace = true
 serde_cbor.workspace = true
 fnv.workspace = true
-rayon.workspace = true
 serde_json.workspace = true
 zstd.workspace = true
 solana-vote-program.workspace = true
 solana-reward-info.workspace = true
+xxhash-rust.workspace = true
+dashmap.workspace = true
+once_cell.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
