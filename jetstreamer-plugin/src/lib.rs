@@ -101,6 +101,8 @@
 /// Built-in plugin implementations that ship with Jetstreamer.
 pub mod plugins;
 
+const LOG_MODULE: &str = "jetstreamer::runner";
+
 use std::{
     fmt::Display,
     future::Future,
@@ -370,11 +372,15 @@ impl PluginRunner {
                 let slots_since_flush = slots_since_flush.clone();
                 let shutting_down = shutting_down.clone();
                 async move {
+                    let log_target = format!("{}::T{:03}", LOG_MODULE, thread_id);
                     if plugin_handles.is_empty() {
                         return Ok(());
                     }
                     if shutting_down.load(Ordering::SeqCst) {
-                        log::debug!("ignoring block while shutdown is in progress");
+                        log::debug!(
+                            target: &log_target,
+                            "ignoring block while shutdown is in progress"
+                        );
                         return Ok(());
                     }
                     let block = Arc::new(block);
@@ -385,7 +391,12 @@ impl PluginRunner {
                             .on_block(thread_id, db.clone(), block.as_ref())
                             .await
                         {
-                            log::error!("plugin {} on_block error: {}", handle.name, err);
+                            log::error!(
+                                target: &log_target,
+                                "plugin {} on_block error: {}",
+                                handle.name,
+                                err
+                            );
                             continue;
                         }
                         if let (Some(db_client), BlockData::Block { slot, .. }) =
@@ -403,6 +414,7 @@ impl PluginRunner {
                                 record_plugin_slot(db_client, handle.id, *slot).await
                             {
                                 log::error!(
+                                    target: &log_target,
                                     "failed to record plugin slot for {}: {}",
                                     handle.name,
                                     err
@@ -418,9 +430,14 @@ impl PluginRunner {
                             && let Some(db_client) = clickhouse.clone()
                         {
                             let buffer = slot_buffer.clone();
+                            let log_target_clone = log_target.clone();
                             tokio::spawn(async move {
                                 if let Err(err) = flush_slot_buffer(db_client, buffer).await {
-                                    log::error!("failed to flush buffered plugin slots: {}", err);
+                                    log::error!(
+                                        target: &log_target_clone,
+                                        "failed to flush buffered plugin slots: {}",
+                                        err
+                                    );
                                 }
                             });
                         }
@@ -440,14 +457,22 @@ impl PluginRunner {
                                 )
                                 .await
                                 {
-                                    log::error!("failed to record slot status: {}", err);
+                                    log::error!(
+                                        target: &log_target,
+                                        "failed to record slot status: {}",
+                                        err
+                                    );
                                 }
                             }
                             BlockData::LeaderSkipped { slot } => {
                                 if let Err(err) =
                                     record_slot_status(db_client, *slot, thread_id, 0).await
                                 {
-                                    log::error!("failed to record slot status: {}", err);
+                                    log::error!(
+                                        target: &log_target,
+                                        "failed to record slot status: {}",
+                                        err
+                                    );
                                 }
                             }
                         }
@@ -467,11 +492,15 @@ impl PluginRunner {
                 let clickhouse = clickhouse.clone();
                 let shutting_down = shutting_down.clone();
                 async move {
+                    let log_target = format!("{}::T{:03}", LOG_MODULE, thread_id);
                     if plugin_handles.is_empty() {
                         return Ok(());
                     }
                     if shutting_down.load(Ordering::SeqCst) {
-                        log::debug!("ignoring transaction while shutdown is in progress");
+                        log::debug!(
+                            target: &log_target,
+                            "ignoring transaction while shutdown is in progress"
+                        );
                         return Ok(());
                     }
                     let transaction = Arc::new(transaction);
@@ -481,7 +510,12 @@ impl PluginRunner {
                             .on_transaction(thread_id, clickhouse.clone(), transaction.as_ref())
                             .await
                         {
-                            log::error!("plugin {} on_transaction error: {}", handle.name, err);
+                            log::error!(
+                                target: &log_target,
+                                "plugin {} on_transaction error: {}",
+                                handle.name,
+                                err
+                            );
                         }
                     }
                     Ok(())
@@ -499,11 +533,15 @@ impl PluginRunner {
                 let clickhouse = clickhouse.clone();
                 let shutting_down = shutting_down.clone();
                 async move {
+                    let log_target = format!("{}::T{:03}", LOG_MODULE, thread_id);
                     if plugin_handles.is_empty() {
                         return Ok(());
                     }
                     if shutting_down.load(Ordering::SeqCst) {
-                        log::debug!("ignoring entry while shutdown is in progress");
+                        log::debug!(
+                            target: &log_target,
+                            "ignoring entry while shutdown is in progress"
+                        );
                         return Ok(());
                     }
                     let entry = Arc::new(entry);
@@ -513,7 +551,12 @@ impl PluginRunner {
                             .on_entry(thread_id, clickhouse.clone(), entry.as_ref())
                             .await
                         {
-                            log::error!("plugin {} on_entry error: {}", handle.name, err);
+                            log::error!(
+                                target: &log_target,
+                                "plugin {} on_entry error: {}",
+                                handle.name,
+                                err
+                            );
                         }
                     }
                     Ok(())
@@ -531,11 +574,15 @@ impl PluginRunner {
                 let clickhouse = clickhouse.clone();
                 let shutting_down = shutting_down.clone();
                 async move {
+                    let log_target = format!("{}::T{:03}", LOG_MODULE, thread_id);
                     if plugin_handles.is_empty() {
                         return Ok(());
                     }
                     if shutting_down.load(Ordering::SeqCst) {
-                        log::debug!("ignoring reward while shutdown is in progress");
+                        log::debug!(
+                            target: &log_target,
+                            "ignoring reward while shutdown is in progress"
+                        );
                         return Ok(());
                     }
                     let reward = Arc::new(reward);
@@ -545,7 +592,12 @@ impl PluginRunner {
                             .on_reward(thread_id, clickhouse.clone(), reward.as_ref())
                             .await
                         {
-                            log::error!("plugin {} on_reward error: {}", handle.name, err);
+                            log::error!(
+                                target: &log_target,
+                                "plugin {} on_reward error: {}",
+                                handle.name,
+                                err
+                            );
                         }
                     }
                     Ok(())
@@ -569,8 +621,12 @@ impl PluginRunner {
                         let shutting_down = shutting_down.clone();
                         let last_snapshot = last_snapshot.clone();
                         async move {
+                            let log_target = format!("{}::T{:03}", LOG_MODULE, thread_id);
                             if shutting_down.load(Ordering::SeqCst) {
-                                log::debug!("skipping stats write during shutdown");
+                                log::debug!(
+                                    target: &log_target,
+                                    "skipping stats write during shutdown"
+                                );
                                 return Ok(());
                             }
                             let finish_at = stats
@@ -632,14 +688,14 @@ impl PluginRunner {
                                     overall_eta = Some("0s".into());
                                 }
                             }
+                            let slots_display = human_readable_count(processed_slots);
+                            let blocks_display = human_readable_count(stats.blocks_processed);
+                            let txs_display = human_readable_count(stats.transactions_processed);
+                            let tps_display = human_readable_count(tps.ceil() as u64);
                             log::info!(
-                                "stats pulse: thread={thread_id} slots={} blocks={} txs={} tps={tps:.2} progress={overall_progress:.1}% thread_slots={} thread_txs={} thread_progress={thread_progress:.1}% eta={}",
-                                processed_slots,
-                                stats.blocks_processed,
-                                stats.transactions_processed,
-                                thread_stats.slots_processed,
-                                thread_stats.transactions_processed,
-                                overall_eta.unwrap_or_else(|| "n/a".into())
+                                target: &log_target,
+                                "{overall_progress:.1}% | ETA: {} | {tps_display} TPS | {slots_display} slots | {blocks_display} blocks | {txs_display} txs | {thread_progress:.1}% thread_progres",
+                                overall_eta.unwrap_or_else(|| "n/a".into()),
                             );
                             Ok(())
                         }
@@ -667,8 +723,15 @@ impl PluginRunner {
             res = &mut firehose_future => res,
             ctrl = signal::ctrl_c() => {
                 match ctrl {
-                    Ok(()) => log::info!("CTRL+C received; initiating shutdown"),
-                    Err(err) => log::error!("failed to listen for CTRL+C: {}", err),
+                    Ok(()) => log::info!(
+                        target: LOG_MODULE,
+                        "CTRL+C received; initiating shutdown"
+                    ),
+                    Err(err) => log::error!(
+                        target: LOG_MODULE,
+                        "failed to listen for CTRL+C: {}",
+                        err
+                    ),
                 }
                 shutting_down.store(true, Ordering::SeqCst);
                 let _ = shutdown_tx.send(());
@@ -680,7 +743,11 @@ impl PluginRunner {
             && let Some(db_client) = clickhouse.clone()
             && let Err(err) = flush_slot_buffer(db_client, slot_buffer.clone()).await
         {
-            log::error!("failed to flush buffered plugin slots: {}", err);
+            log::error!(
+                target: LOG_MODULE,
+                "failed to flush buffered plugin slots: {}",
+                err
+            );
         }
 
         for handle in plugin_handles.iter() {
@@ -690,7 +757,12 @@ impl PluginRunner {
                 .await
                 .map_err(|e| e.to_string())
             {
-                log::error!("plugin {} on_exit error: {}", handle.name, error);
+                log::error!(
+                    target: LOG_MODULE,
+                    "plugin {} on_exit error: {}",
+                    handle.name,
+                    error
+                );
             }
         }
 
@@ -891,6 +963,20 @@ async fn record_slot_status(
 // Ensure PluginRunnerError is Send + Sync + 'static
 trait _CanSend: Send + Sync + 'static {}
 impl _CanSend for PluginRunnerError {}
+
+#[inline]
+fn human_readable_count(value: impl Into<u128>) -> String {
+    let digits = value.into().to_string();
+    let len = digits.len();
+    let mut formatted = String::with_capacity(len + len / 3);
+    for (idx, byte) in digits.bytes().enumerate() {
+        if idx != 0 && (len - idx) % 3 == 0 {
+            formatted.push(',');
+        }
+        formatted.push(char::from(byte));
+    }
+    formatted
+}
 
 fn human_readable_duration(seconds: f64) -> String {
     if !seconds.is_finite() {
