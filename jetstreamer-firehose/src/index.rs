@@ -25,7 +25,10 @@
 //! # Ok(())
 //! # }
 //! ```
-use crate::epochs::{BASE_URL, epoch_to_slot_range, slot_to_epoch};
+use crate::{
+    LOG_MODULE,
+    epochs::{BASE_URL, epoch_to_slot_range, slot_to_epoch},
+};
 use cid::{Cid, multibase::Base};
 use dashmap::{DashMap, mapref::entry::Entry};
 use log::{info, warn};
@@ -290,12 +293,18 @@ impl SlotOffsetIndex {
         if let Some(meta_epoch) = slot_index.metadata_epoch()
             && meta_epoch != epoch
         {
-            warn!("Slot index epoch metadata mismatch: expected {epoch}, got {meta_epoch}");
+            warn!(
+                target: LOG_MODULE,
+                "Slot index epoch metadata mismatch: expected {epoch}, got {meta_epoch}"
+            );
         }
         if let Some(meta_epoch) = cid_index.metadata_epoch()
             && meta_epoch != epoch
         {
-            warn!("CID index epoch metadata mismatch: expected {epoch}, got {meta_epoch}");
+            warn!(
+                target: LOG_MODULE,
+                "CID index epoch metadata mismatch: expected {epoch}, got {meta_epoch}"
+            );
         }
 
         Ok((slot_index, cid_index))
@@ -353,9 +362,15 @@ impl RemoteCompactIndex {
             .and_then(|name| name.split('-').nth(1))
             .and_then(|value| value.parse::<u64>().ok());
         if let Some(epoch) = epoch_hint {
-            info!("Fetching {kind_label} compact index for epoch {epoch}");
+            info!(
+                target: LOG_MODULE,
+                "Fetching {kind_label} compact index for epoch {epoch}"
+            );
         } else {
-            info!("Fetching {kind_label} compact index");
+            info!(
+                target: LOG_MODULE,
+                "Fetching {kind_label} compact index"
+            );
         }
 
         let header =
@@ -812,6 +827,7 @@ async fn fetch_range(
             if attempt < FETCH_RANGE_MAX_RETRIES {
                 let delay_ms = FETCH_RANGE_BASE_DELAY_MS.saturating_mul(1u64 << attempt.min(10));
                 warn!(
+                    target: LOG_MODULE,
                     "HTTP {} fetching {} (range {}-{}); retrying in {} ms (attempt {}/{})",
                     response.status(),
                     url,

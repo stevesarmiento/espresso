@@ -34,6 +34,7 @@ use tokio::{
 };
 
 use crate::{
+    LOG_MODULE,
     epochs::{epoch_to_slot_range, fetch_epoch_stream, slot_to_epoch},
     index::{SLOT_OFFSET_INDEX, SlotOffsetIndexError},
     node_reader::NodeReader,
@@ -44,7 +45,6 @@ use crate::{
 // header, seeking, reading next block). Adjust here to tune stall detection/restart
 // aggressiveness.
 const OP_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
-const LOG_MODULE: &str = "jetstreamer::firehose";
 
 fn poll_shutdown(
     flag: &Arc<std::sync::atomic::AtomicBool>,

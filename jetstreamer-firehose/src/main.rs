@@ -1,5 +1,5 @@
 use {
-    jetstreamer_firehose::{firehose::firehose_geyser, index::get_index_base_url},
+    jetstreamer_firehose::{LOG_MODULE, firehose::firehose_geyser, index::get_index_base_url},
     reqwest::Client,
     std::{env::args, sync::Arc},
 };
@@ -19,13 +19,13 @@ fn main() {
         slot_a..(slot_b + 1)
     } else {
         let epoch: u64 = first_arg.parse().expect("failed to parse epoch");
-        log::info!("epoch: {}", epoch);
+        log::info!(target: LOG_MODULE, "epoch: {}", epoch);
         let (start_slot, end_slot) = jetstreamer_firehose::epochs::epoch_to_slot_range(epoch);
         start_slot..end_slot
     };
     let geyser_config_files = &[std::path::PathBuf::from(args().nth(2).unwrap())];
-    log::info!("slot index base url: {}", index_base_url);
-    log::info!("geyser config files: {:?}", geyser_config_files);
+    log::info!(target: LOG_MODULE, "slot index base url: {}", index_base_url);
+    log::info!(target: LOG_MODULE, "geyser config files: {:?}", geyser_config_files);
     firehose_geyser(
         Arc::new(tokio::runtime::Runtime::new().unwrap()),
         slot_range,

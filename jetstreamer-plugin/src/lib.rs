@@ -694,7 +694,7 @@ impl PluginRunner {
                             let tps_display = human_readable_count(tps.ceil() as u64);
                             log::info!(
                                 target: &log_target,
-                                "{overall_progress:.1}% | ETA: {} | {tps_display} TPS | {slots_display} slots | {blocks_display} blocks | {txs_display} txs | {thread_progress:.1}% thread_progres",
+                                "{overall_progress:.1}% | ETA: {} | {tps_display} TPS | {slots_display} slots | {blocks_display} blocks | {txs_display} txs | thread: {thread_progress:.1}%",
                                 overall_eta.unwrap_or_else(|| "n/a".into()),
                             );
                             Ok(())

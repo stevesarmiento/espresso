@@ -1,3 +1,4 @@
+use crate::LOG_MODULE;
 use crate::epochs::slot_to_epoch;
 use crate::firehose::FirehoseError;
 use crate::index::{SlotOffsetIndexError, slot_to_offset};
@@ -214,12 +215,17 @@ impl<R: AsyncRead + Unpin + AsyncSeek + Len> NodeReader<R> {
 
         let res = slot_to_offset(slot).await;
         if let Err(SlotOffsetIndexError::SlotNotFound(..)) = res {
-            log::warn!("Slot {} not found in index, seeking to next slot", slot);
+            log::warn!(
+                target: LOG_MODULE,
+                "Slot {} not found in index, seeking to next slot",
+                slot
+            );
             // Box the recursive call to avoid infinitely sized future
             return Box::pin(self.seek_to_slot_inner(slot + 1)).await;
         }
         let offset = res?;
         log::info!(
+            target: LOG_MODULE,
             "Seeking to slot {} in epoch {} @ offset {}",
             slot,
             epoch,

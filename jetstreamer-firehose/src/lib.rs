@@ -150,3 +150,6 @@ pub mod subset;
 pub mod transaction;
 /// Shared helpers used throughout the firehose crate.
 pub mod utils;
+
+/// Log target prefix used across the firehose crate.
+pub const LOG_MODULE: &str = "jetstreamer::firehose";
