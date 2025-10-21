@@ -952,18 +952,17 @@ where
                                             stats.current_slot,
                                         )
                                     });
-                                    let mut counted_leader_skips: u64 = 0;
-                                    if block_enabled {
-                                        if let Some(on_block_cb) = on_block.as_ref() {
-                                            if let Some(previous_slot) = previous_slot {
-                                                for skipped_slot in (previous_slot + 1)..slot {
-                                                    log::debug!(
-                                                        target: &log_target,
-                                                        "leader skipped slot {} (previous slot {}, current slot {})",
-                                                        skipped_slot,
-                                                        previous_slot,
-                                                        slot,
-                                                    );
+                                    if let Some(previous_slot) = previous_slot {
+                                        for skipped_slot in (previous_slot + 1)..slot {
+                                            log::debug!(
+                                                target: &log_target,
+                                                "leader skipped slot {} (previous slot {}, current slot {})",
+                                                skipped_slot,
+                                                previous_slot,
+                                                slot,
+                                            );
+                                            if block_enabled {
+                                                if let Some(on_block_cb) = on_block.as_ref() {
                                                     on_block_cb(
                                                         thread_index,
                                                         BlockData::LeaderSkipped {
@@ -977,10 +976,29 @@ where
                                                             error_slot,
                                                         )
                                                     })?;
-                                                    counted_leader_skips =
-                                                        counted_leader_skips.saturating_add(1);
                                                 }
                                             }
+                                            if tracking_enabled {
+                                                let delta = skipped_slot
+                                                    .saturating_sub(last_counted_slot);
+                                                if delta > 0 {
+                                                    overall_slots_processed
+                                                        .fetch_add(delta, Ordering::Relaxed);
+                                                    slots_since_stats
+                                                        .fetch_add(delta, Ordering::Relaxed);
+                                                    if let Some(ref mut stats) = thread_stats {
+                                                        stats.leader_skipped_slots += delta;
+                                                        stats.slots_processed += delta;
+                                                        stats.current_slot = skipped_slot;
+                                                    }
+                                                    last_counted_slot = skipped_slot;
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    if block_enabled {
+                                        if let Some(on_block_cb) = on_block.as_ref() {
                                             let keyed_rewards = std::mem::take(&mut this_block_rewards);
                                             on_block_cb(
                                                 thread_index,
@@ -1012,40 +1030,43 @@ where
                                         this_block_rewards.clear();
                                     }
                                     previous_blockhash = latest_entry_blockhash;
-
-                                    let slot_increment = slot.saturating_sub(prev_last_counted_slot);
-                                    let block_increment = if slot_increment > 0 { 1 } else { 0 };
-                                    let leader_skipped_increment = slot_increment
-                                        .saturating_sub(block_increment)
-                                        .min(counted_leader_skips);
-
+                                    let last_slot_before_block = last_counted_slot;
                                     if tracking_enabled {
-                                        if let Some(thread_stats_ref) = thread_stats.as_mut() {
-                                            if slot_increment > 0 {
-                                                thread_stats_ref.slots_processed += slot_increment;
-                                                thread_stats_ref.current_slot = slot;
-                                            }
-                                            if block_increment > 0 {
-                                                thread_stats_ref.blocks_processed += block_increment;
-                                            }
-                                            if leader_skipped_increment > 0 {
-                                                thread_stats_ref.leader_skipped_slots +=
-                                                    leader_skipped_increment;
-                                            }
-                                        }
-
-                                        if slot_increment > 0 {
+                                        let block_slot_delta =
+                                            slot.saturating_sub(last_slot_before_block);
+                                        if block_slot_delta > 0 {
                                             overall_slots_processed
-                                                .fetch_add(slot_increment, Ordering::Relaxed);
+                                                .fetch_add(block_slot_delta, Ordering::Relaxed);
                                             slots_since_stats
-                                                .fetch_add(slot_increment, Ordering::Relaxed);
+                                                .fetch_add(block_slot_delta, Ordering::Relaxed);
+                                            if let Some(ref mut stats) = thread_stats {
+                                                stats.slots_processed += block_slot_delta;
+                                                stats.current_slot = slot;
+                                            }
+                                            last_counted_slot = slot;
                                         }
-                                        if block_increment > 0 {
+                                        if slot > prev_last_counted_slot {
                                             overall_blocks_processed
                                                 .fetch_add(1, Ordering::Relaxed);
                                             blocks_since_stats.fetch_add(1, Ordering::Relaxed);
+                                            if let Some(ref mut stats) = thread_stats {
+                                                stats.blocks_processed += 1;
+                                            }
                                         }
+                                    }
 
+                                    let slot_increment =
+                                        last_counted_slot.saturating_sub(prev_last_counted_slot);
+                                    let block_increment =
+                                        if tracking_enabled && slot > prev_last_counted_slot {
+                                            1
+                                        } else {
+                                            0
+                                        };
+                                    let leader_skipped_increment =
+                                        slot_increment.saturating_sub(block_increment);
+
+                                    if tracking_enabled {
                                         if let (Some(stats_tracking_tmp), Some(thread_stats_ref)) =
                                             (&stats_tracking, &mut thread_stats)
                                         {
@@ -1106,6 +1127,8 @@ where
                                                                 thread_stats_ref
                                                                     .slots_processed
                                                                     .saturating_sub(slot_increment);
+                                                            thread_stats_ref.current_slot =
+                                                                prev_last_counted_slot;
                                                         }
                                                         if block_increment > 0 {
                                                             thread_stats_ref.blocks_processed =
@@ -1127,10 +1150,6 @@ where
                                                 }
                                             }
                                         }
-                                    }
-
-                                    if slot_increment > 0 {
-                                        last_counted_slot = slot;
                                     }
                                 }
                                 Subset(_subset) => (),
