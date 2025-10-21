@@ -107,6 +107,7 @@ use clickhouse::Client;
 use jetstreamer::{
     JetstreamerRunner,
     firehose::firehose::{BlockData, TransactionData},
+    firehose::epochs,
     plugin::{Plugin, PluginFuture},
 };
 
@@ -146,18 +147,20 @@ impl Plugin for LoggingPlugin {
     }
 }
 
-unsafe {
-    std::env::set_var("JETSTREAMER_THREADS", "4");
-    std::env::set_var("JETSTREAMER_CLICKHOUSE_MODE", "remote");
-}
+let (start_slot, end_inclusive) = epochs::epoch_to_slot_range(800);
 
 JetstreamerRunner::new()
     .with_plugin(Box::new(LoggingPlugin))
-    .parse_cli_args()
-    .expect("CLI arguments and environment variables parsed")
+    .with_threads(4)
+    .with_slot_range_bounds(start_slot, end_inclusive + 1)
+    .with_clickhouse_dsn("https://clickhouse.example.com")
     .run()
     .expect("runner completed");
 ```
+
+If you prefer to configure Jetstreamer via the command line, keep using
+`JetstreamerRunner::parse_cli_args` to hydrate the runner from process arguments and
+environment variables.
 
 When `JETSTREAMER_CLICKHOUSE_MODE` is `auto` (the default), Jetstreamer inspects the DSN to
 decide whether to launch the bundled ClickHouse helper or connect to an external cluster.

@@ -189,7 +189,10 @@ fn parse_clickhouse_mode(value: &str) -> Option<ClickhouseMode> {
 /// use clickhouse::Client;
 /// use jetstreamer::{
 ///     JetstreamerRunner,
-///     firehose::firehose::{BlockData, TransactionData},
+///     firehose::{
+///         epochs,
+///         firehose::{BlockData, TransactionData},
+///     },
 ///     plugin::{Plugin, PluginFuture},
 /// };
 ///
@@ -230,31 +233,30 @@ fn parse_clickhouse_mode(value: &str) -> Option<ClickhouseMode> {
 /// }
 ///
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-/// // Increase ingest parallelism and opt out of the embedded ClickHouse helper.
-/// unsafe {
-///     std::env::set_var("JETSTREAMER_THREADS", "4");
-///     std::env::set_var("JETSTREAMER_CLICKHOUSE_MODE", "remote");
-/// }
+/// let (start_slot, end_inclusive) = epochs::epoch_to_slot_range(800);
 ///
-/// let runner = JetstreamerRunner::new()
+/// JetstreamerRunner::new()
 ///     .with_plugin(Box::new(Dummy))
-///     .parse_cli_args()?;
-///
-/// runner.run().expect("runner execution");
+///     .with_threads(4)
+///     .with_slot_range_bounds(start_slot, end_inclusive + 1)
+///     .with_clickhouse_dsn("https://clickhouse.example.com")
+///     .run()
+///     .expect("runner execution");
 /// # Ok(())
 /// # }
 /// ```
 ///
 /// ## Multiplexing and Throughput
 ///
-/// By default `JETSTREAMER_THREADS` is set to `1` which there is no HTTP multiplexing of the
-/// underlying [`firehose`](jetstreamer_firehose::firehose::firehose) stream. The way
-/// multiplexing works is multiple threads connect to different subsections of the underlying
-/// slot range being streamed from Old Faithful, and handle this subrange in parallel with
-/// other threads, achieving embarrasingly parallel throughput increases up to the limit of
-/// your CPU and internet connection. A good rule of thumb is to expect about 250 Mbps of
-/// bandwidth and significant one-core compute per thread. On a 16 core system with a 1 Gbps
-/// network connection, setting `JETSTREAMER_THREADS` to 4-5 should yield optimal results.
+/// By default `JETSTREAMER_THREADS` (or a runner without [`JetstreamerRunner::with_threads`])
+/// uses a single ingestion thread, meaning there is no HTTP multiplexing of the underlying
+/// [`firehose`](jetstreamer_firehose::firehose::firehose) stream. The way multiplexing works
+/// is multiple threads connect to different subsections of the underlying slot range being
+/// streamed from Old Faithful, and handle this subrange in parallel with other threads,
+/// achieving embarrasingly parallel throughput increases up to the limit of your CPU and
+/// internet connection. A good rule of thumb is to expect about 250 Mbps of bandwidth and
+/// significant one-core compute per thread. On a 16 core system with a 1 Gbps network
+/// connection, setting `JETSTREAMER_THREADS` to 4-5 should yield optimal results.
 ///
 /// To achieve 2M TPS+, you will need a 20+ Gbps network connection and at least a 64 core CPU.
 /// On our benchmark hardware we currently have a 100 Gbps connection and 64 cores, which has
@@ -305,9 +307,25 @@ impl JetstreamerRunner {
         self
     }
 
+    /// Sets the number of firehose ingestion threads.
+    pub fn with_threads(mut self, threads: usize) -> Self {
+        self.config.threads = std::cmp::max(1, threads);
+        self
+    }
+
     /// Restricts [`JetstreamerRunner::run`] to a specific slot range.
     pub fn with_slot_range(mut self, slot_range: Range<u64>) -> Self {
         self.config.slot_range = slot_range;
+        self
+    }
+
+    /// Configures the slot range using an explicit start (inclusive) and end (exclusive).
+    pub fn with_slot_range_bounds(mut self, start_slot: u64, end_slot: u64) -> Self {
+        assert!(
+            start_slot < end_slot,
+            "slot range must have a strictly increasing upper bound"
+        );
+        self.config.slot_range = start_slot..end_slot;
         self
     }
 
