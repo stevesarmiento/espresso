@@ -37,8 +37,15 @@ following re-exports:
 
 While Jetstreamer is able to play back all blocks, transactions, epochs, and rewards in the
 history of Solana mainnet, it is limited by what is in Old Faithful. Old Faithful does not
-contain account updates, so Jetstreamer at the moment also does not have account updates,
-though we plan to eventually have a separate project that provides this, stay tuned!
+contain account updates, so Jetstreamer at the moment also does not have account updates or
+transaction logs, though we plan to eventually have a separate project that provides this, stay
+tuned!
+
+It is worth noting that the way Old Faithful and thus Jetstreamer stores transactions, they are
+stored in their "already-executed" state as they originally appeared to Geyser when they were
+first executed. Thus while Jetstreamer can replay ledger data, it is not executing transactions
+directly, and when we say 2.7M TPS, we mean "2.7M transactions processed by a Jetstreamer or
+Geyser plugin locally, streamed over the internet from the Old Faithful archive."
 
 ## Quick Start
 
