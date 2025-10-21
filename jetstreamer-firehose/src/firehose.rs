@@ -311,14 +311,16 @@ async fn maybe_emit_stats<OnStats: Handler<Stats>>(
             time_since_last_pulse,
         };
 
-        (stats_tracker.on_stats)(thread_index, stats)
-            .await
-            .map_err(|e| {
-                (
-                    FirehoseError::OnStatsHandlerError(e),
-                    thread_stats.current_slot,
-                )
-            })?;
+        if let Err(e) = (stats_tracker.on_stats)(thread_index, stats).await {
+            last_pulse.store(previous, Ordering::Relaxed);
+            transactions_since_stats.fetch_add(processed_transactions, Ordering::Relaxed);
+            blocks_since_stats.fetch_add(processed_blocks, Ordering::Relaxed);
+            slots_since_stats.fetch_add(processed_slots, Ordering::Relaxed);
+            return Err((
+                FirehoseError::OnStatsHandlerError(e),
+                thread_stats.current_slot,
+            ));
+        }
     }
     Ok(())
 }
@@ -940,6 +942,15 @@ where
                                     }
                                 }
                                 Block(block) => {
+                                    let thread_stats_snapshot = thread_stats.as_ref().map(|stats| {
+                                        (
+                                            stats.slots_processed,
+                                            stats.blocks_processed,
+                                            stats.leader_skipped_slots,
+                                            stats.current_slot,
+                                        )
+                                    });
+                                    let mut counted_leader_skips: u64 = 0;
                                     if block_enabled {
                                         if let Some(on_block_cb) = on_block.as_ref() {
                                             if let Some(previous_slot) = previous_slot {
@@ -964,16 +975,13 @@ where
                                                             error_slot,
                                                         )
                                                     })?;
-                                                    fetch_add_if(
-                                                        tracking_enabled,
-                                                        &overall_slots_processed,
-                                                        1,
-                                                    );
                                                     if let Some(ref mut stats) = thread_stats {
                                                         stats.leader_skipped_slots += 1;
                                                         stats.slots_processed += 1;
                                                         stats.current_slot = skipped_slot;
                                                     }
+                                                    counted_leader_skips =
+                                                        counted_leader_skips.saturating_add(1);
                                                 }
                                             }
                                             let keyed_rewards = std::mem::take(&mut this_block_rewards);
@@ -1007,16 +1015,22 @@ where
                                         this_block_rewards.clear();
                                     }
                                     previous_blockhash = latest_entry_blockhash;
-                                    if let (Some(stats_tracking_tmp), Some(thread_stats)) = (&stats_tracking, &mut thread_stats) {
-                                        overall_slots_processed.fetch_add(1, Ordering::Relaxed);
+                                    if let (Some(stats_tracking_tmp), Some(thread_stats)) =
+                                        (&stats_tracking, &mut thread_stats)
+                                    {
+                                        let slot_increment =
+                                            counted_leader_skips.saturating_add(1);
+                                        overall_slots_processed
+                                            .fetch_add(slot_increment, Ordering::Relaxed);
                                         overall_blocks_processed.fetch_add(1, Ordering::Relaxed);
                                         thread_stats.blocks_processed += 1;
                                         thread_stats.slots_processed += 1;
                                         thread_stats.current_slot = slot;
                                         blocks_since_stats.fetch_add(1, Ordering::Relaxed);
-                                        slots_since_stats.fetch_add(1, Ordering::Relaxed);
+                                        slots_since_stats
+                                            .fetch_add(slot_increment, Ordering::Relaxed);
                                         if slot % stats_tracking_tmp.tracking_interval_slots == 0 {
-                                            maybe_emit_stats(
+                                            if let Err(err) = maybe_emit_stats(
                                                 stats_tracking.as_ref(),
                                                 thread_index,
                                                 thread_stats,
@@ -1030,7 +1044,47 @@ where
                                                 &last_pulse,
                                                 start_time,
                                             )
-                                            .await?;
+                                            .await
+                                            {
+                                                blocks_since_stats
+                                                    .fetch_sub(1, Ordering::Relaxed);
+                                                slots_since_stats.fetch_sub(
+                                                    slot_increment,
+                                                    Ordering::Relaxed,
+                                                );
+                                                overall_blocks_processed
+                                                    .fetch_sub(1, Ordering::Relaxed);
+                                                overall_slots_processed.fetch_sub(
+                                                    slot_increment,
+                                                    Ordering::Relaxed,
+                                                );
+                                                if let Some((
+                                                    prev_slots_processed,
+                                                    prev_blocks_processed,
+                                                    prev_leader_skipped,
+                                                    prev_current_slot,
+                                                )) = thread_stats_snapshot
+                                                {
+                                                    thread_stats.slots_processed =
+                                                        prev_slots_processed;
+                                                    thread_stats.blocks_processed =
+                                                        prev_blocks_processed;
+                                                    thread_stats.leader_skipped_slots =
+                                                        prev_leader_skipped;
+                                                    thread_stats.current_slot = prev_current_slot;
+                                                } else {
+                                                    thread_stats.slots_processed = thread_stats
+                                                        .slots_processed
+                                                        .saturating_sub(slot_increment);
+                                                    thread_stats.blocks_processed = thread_stats
+                                                        .blocks_processed
+                                                        .saturating_sub(1);
+                                                    thread_stats.leader_skipped_slots = thread_stats
+                                                        .leader_skipped_slots
+                                                        .saturating_sub(counted_leader_skips);
+                                                }
+                                                return Err(err);
+                                            }
                                         }
                                     }
                                 }
