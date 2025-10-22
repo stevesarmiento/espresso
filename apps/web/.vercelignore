@@ -1,0 +1,14 @@
+# Rust
+../../apps/streamer/
+*.rs
+Cargo.*
+
+# Docker
+../../infrastructure/
+
+# Scripts
+../../scripts/
+
+# Documentation
+../../docs/
+

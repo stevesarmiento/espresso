@@ -1,0 +1,39 @@
+# Multi-stage Rust build for Jetstreamer
+FROM rust:1.75 as builder
+
+WORKDIR /app
+
+# Copy Cargo files
+COPY apps/streamer/Cargo.toml apps/streamer/Cargo.lock ./
+
+# Copy source code
+COPY apps/streamer/jetstreamer-firehose ./jetstreamer-firehose
+COPY apps/streamer/jetstreamer-plugin ./jetstreamer-plugin
+COPY apps/streamer/jetstreamer-utils ./jetstreamer-utils
+COPY apps/streamer/src ./src
+COPY apps/streamer/.cargo ./.cargo
+
+# Build release binary
+RUN cargo build --release
+
+# Runtime stage
+FROM debian:bookworm-slim
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    libssl3 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy binary from builder
+COPY --from=builder /app/target/release/jetstreamer /usr/local/bin/jetstreamer
+
+# Environment variables
+ENV RUST_LOG=info
+ENV JETSTREAMER_THREADS=8
+ENV JETSTREAMER_CLICKHOUSE_MODE=remote
+
+ENTRYPOINT ["jetstreamer"]
+

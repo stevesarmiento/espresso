@@ -1,0 +1,41 @@
+# Next.js / Node
+apps/web/
+node_modules/
+.next/
+.turbo/
+packages/
+
+# Documentation
+docs/
+*.md
+!apps/streamer/README.md
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Git
+.git/
+.github/
+
+# Environment
+.env*
+!.env.example
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+target/debug/
+**/*.rs.bk
+
+# Scripts
+scripts/
+

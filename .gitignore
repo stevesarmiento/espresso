@@ -1,3 +1,50 @@
-/target
-/bin
-/.serena
+# Rust
+target/
+bin/
+.serena/
+apps/streamer/bin/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Next.js
+.next/
+out/
+build/
+dist/
+
+# Environment files
+.env
+.env*.local
+.env.production
+
+# Vercel
+.vercel
+
+# Turbo
+.turbo
+
+# Testing
+coverage/
+.nyc_output/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+logs/
+*.log
+
+# Misc
+*.tsbuildinfo
+.cache/
