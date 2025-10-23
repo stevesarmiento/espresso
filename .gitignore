@@ -1,8 +1,9 @@
 # Rust
-target/
-bin/
-.serena/
+/target
+/bin
+/.serena
 apps/streamer/bin/
+apps/streamer/target/
 
 # Node.js
 node_modules/

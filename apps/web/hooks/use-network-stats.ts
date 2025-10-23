@@ -19,11 +19,11 @@ async function fetchTPSHistory(hours: number = 24): Promise<TPSData[]> {
   return json.data;
 }
 
-export function useNetworkStats(refetchInterval: number = 30000) {
+export function useNetworkStats(refetchInterval: number = 1000) {
   return useQuery({
     queryKey: ['network-stats'],
     queryFn: fetchNetworkStats,
-    staleTime: 30 * 1000, // 30 seconds
+    staleTime: 1000, // 1 second
     refetchInterval,
   });
 }
@@ -32,8 +32,8 @@ export function useTPSHistory(hours: number = 24) {
   return useQuery({
     queryKey: ['tps-history', hours],
     queryFn: () => fetchTPSHistory(hours),
-    staleTime: 60 * 1000,
-    refetchInterval: 60 * 1000,
+    staleTime: 1000,
+    refetchInterval: 1000, // Refresh every second
   });
 }
 

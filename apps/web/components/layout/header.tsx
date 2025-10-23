@@ -3,33 +3,35 @@ import { Activity } from 'lucide-react';
 
 export function Header() {
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center">
-        <Link href="/" className="flex items-center space-x-2">
-          <Activity className="h-6 w-6" />
-          <span className="font-bold text-xl">Solana Analytics</span>
-        </Link>
+    <header className="relative z-50 w-full border-b border-border-low bg-white/80 backdrop-blur">
+      <div className="max-w-7xl mx-auto px-8">
+        <div className="flex h-16 items-center justify-between">
+          <Link href="/" className="flex items-center space-x-2">
+            <Activity className="h-5 w-5 text-gray-900" />
+            <span className="font-diatype-medium text-lg text-gray-900">Solana Analytics</span>
+          </Link>
 
-        <nav className="ml-auto flex items-center space-x-6 text-sm font-medium">
-          <Link
-            href="/programs"
-            className="transition-colors hover:text-foreground/80"
-          >
-            Programs
-          </Link>
-          <Link
-            href="/network"
-            className="transition-colors hover:text-foreground/80"
-          >
-            Network
-          </Link>
-          <Link
-            href="/transactions"
-            className="transition-colors hover:text-foreground/80"
-          >
-            Transactions
-          </Link>
-        </nav>
+          <nav className="flex items-center space-x-8">
+            <Link
+              href="/programs"
+              className="text-nav-item text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              Programs
+            </Link>
+            <Link
+              href="/network"
+              className="text-nav-item text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              Network
+            </Link>
+            <Link
+              href="/transactions"
+              className="text-nav-item text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              Transactions
+            </Link>
+          </nav>
+        </div>
       </div>
     </header>
   );

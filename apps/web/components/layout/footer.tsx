@@ -1,14 +1,14 @@
 export function Footer() {
   return (
-    <footer className="border-t py-6 md:py-0">
-      <div className="container flex flex-col items-center justify-between gap-4 md:h-24 md:flex-row">
-        <p className="text-center text-sm leading-loose text-muted-foreground md:text-left">
+    <footer className="border-t border-border-low bg-white">
+      <div className="max-w-7xl mx-auto px-8 py-12">
+        <p className="text-body-md text-gray-600">
           Built with{' '}
           <a
-            href="https://github.com/your-repo"
+            href="https://github.com/anza-xyz/jetstreamer"
             target="_blank"
             rel="noreferrer"
-            className="font-medium underline underline-offset-4"
+            className="text-gray-900 hover:underline underline-offset-4 transition-colors"
           >
             Jetstreamer
           </a>

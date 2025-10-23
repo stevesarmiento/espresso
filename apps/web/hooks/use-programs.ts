@@ -26,8 +26,8 @@ export function usePrograms(timeRange: TimeRange = '24h') {
   return useQuery({
     queryKey: ['programs', timeRange],
     queryFn: () => fetchPrograms(timeRange),
-    staleTime: 60 * 1000, // 1 minute
-    refetchInterval: 60 * 1000, // Refresh every minute
+    staleTime: 1000, // 1 second
+    refetchInterval: 1000, // Refresh every second
   });
 }
 
@@ -35,8 +35,8 @@ export function useProgramDetail(programId: string, timeRange: TimeRange = '7d')
   return useQuery({
     queryKey: ['program', programId, timeRange],
     queryFn: () => fetchProgramById(programId, timeRange),
-    staleTime: 60 * 1000,
-    refetchInterval: 60 * 1000,
+    staleTime: 1000,
+    refetchInterval: 1000, // Refresh every second
     enabled: !!programId,
   });
 }
