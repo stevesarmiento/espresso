@@ -11,7 +11,7 @@ import type {
 
 export async function getTopPrograms(
   timeRange: '1h' | '24h' | '7d' = '24h',
-  limit: number = 50
+  limit?: number
 ): Promise<ProgramStats[]> {
   const intervalMap: Record<string, TimeInterval> = {
     '1h': '1 HOUR',
@@ -20,28 +20,24 @@ export async function getTopPrograms(
   };
   
   const interval = intervalMap[timeRange];
+  const resultLimit = limit ?? 50;
 
   try {
     const result = await clickhouse.query({
       query: `
         SELECT 
-          program_id,
-          sum(count) as total_transactions,
-          sum(error_count) as total_errors,
-          round(100 * (1 - sum(error_count) / sum(count)), 2) as success_rate,
-          round(avg(total_cus / count), 2) as avg_compute_units,
-          min(timestamp) as first_seen,
-          max(timestamp) as last_seen
-        FROM program_invocations
-        WHERE timestamp > now() - INTERVAL {interval:String}
-        GROUP BY program_id
+          hex(p.program_id) as program_id,
+          sum(p.count) as total_transactions,
+          sum(p.error_count) as total_errors,
+          round(100 * (1 - sum(p.error_count) / sum(p.count)), 2) as success_rate,
+          round(avg(p.total_cus / p.count), 2) as avg_compute_units,
+          min(p.timestamp) as first_seen,
+          max(p.timestamp) as last_seen
+        FROM program_invocations p
+        GROUP BY p.program_id
         ORDER BY total_transactions DESC
-        LIMIT {limit:UInt32}
+        LIMIT ${resultLimit}
       `,
-      query_params: {
-        interval,
-        limit,
-      },
       format: 'JSONEachRow',
     });
 
@@ -68,24 +64,19 @@ export async function getProgramById(
     const result = await clickhouse.query({
       query: `
         SELECT 
-          program_id,
-          sum(count) as total_transactions,
-          sum(error_count) as total_errors,
-          round(100 * (1 - sum(error_count) / sum(count)), 2) as success_rate,
-          round(avg(total_cus / count), 2) as avg_compute_units,
-          min(min_cus) as min_compute_units,
-          max(max_cus) as max_compute_units,
-          min(timestamp) as first_seen,
-          max(timestamp) as last_seen
-        FROM program_invocations
-        WHERE program_id = {programId:String}
-          AND timestamp > now() - INTERVAL {interval:String}
-        GROUP BY program_id
+          hex(p.program_id) as program_id,
+          sum(p.count) as total_transactions,
+          sum(p.error_count) as total_errors,
+          round(100 * (1 - sum(p.error_count) / sum(p.count)), 2) as success_rate,
+          round(avg(p.total_cus / p.count), 2) as avg_compute_units,
+          min(p.min_cus) as min_compute_units,
+          max(p.max_cus) as max_compute_units,
+          min(p.timestamp) as first_seen,
+          max(p.timestamp) as last_seen
+        FROM program_invocations p
+        WHERE hex(p.program_id) = '${programId}'
+        GROUP BY p.program_id
       `,
-      query_params: {
-        programId,
-        interval,
-      },
       format: 'JSONEachRow',
     });
 
@@ -105,20 +96,16 @@ export async function getProgramHourlyStats(
     const result = await clickhouse.query({
       query: `
         SELECT 
-          toStartOfHour(timestamp) as hour,
-          sum(count) as transaction_count,
-          sum(error_count) as error_count,
-          round(avg(total_cus / count), 2) as avg_compute_units
-        FROM program_invocations
-        WHERE program_id = {programId:String}
-          AND timestamp > now() - INTERVAL {hours:UInt32} HOUR
+          toStartOfHour(p.timestamp) as hour,
+          sum(p.count) as transaction_count,
+          sum(p.error_count) as error_count,
+          round(avg(p.total_cus / p.count), 2) as avg_compute_units
+        FROM program_invocations p
+        WHERE hex(p.program_id) = '${programId}'
         GROUP BY hour
         ORDER BY hour DESC
+        LIMIT ${hours}
       `,
-      query_params: {
-        programId,
-        hours,
-      },
       format: 'JSONEachRow',
     });
 
@@ -140,7 +127,6 @@ export async function getNetworkStats(): Promise<NetworkStats> {
           max(transaction_count) as max_tps,
           max(indexed_at) as timestamp
         FROM jetstreamer_slot_status
-        WHERE indexed_at > now() - INTERVAL 1 HOUR
       `,
       format: 'JSONEachRow',
     });
@@ -169,13 +155,9 @@ export async function getTPSHistory(
           transaction_count as tps,
           slot
         FROM jetstreamer_slot_status
-        WHERE indexed_at > now() - INTERVAL {hours:UInt32} HOUR
         ORDER BY indexed_at DESC
         LIMIT 1000
       `,
-      query_params: {
-        hours,
-      },
       format: 'JSONEachRow',
     });
 
@@ -202,12 +184,9 @@ export async function getTransactionBySignature(
           compute_units_consumed,
           programs_invoked
         FROM transactions
-        WHERE signature = {signature:String}
+        WHERE signature = '${signature}'
         LIMIT 1
       `,
-      query_params: {
-        signature,
-      },
       format: 'JSONEachRow',
     });
 
@@ -228,21 +207,17 @@ export async function searchTransactions(params: {
   const { programId, startSlot, endSlot, limit = 20 } = params;
 
   let whereConditions: string[] = [];
-  const queryParams: Record<string, any> = { limit };
 
   if (programId) {
-    whereConditions.push('has(programs_invoked, {programId:String})');
-    queryParams.programId = programId;
+    whereConditions.push(`has(programs_invoked, '${programId}')`);
   }
 
   if (startSlot) {
-    whereConditions.push('slot >= {startSlot:UInt64}');
-    queryParams.startSlot = startSlot;
+    whereConditions.push(`slot >= ${startSlot}`);
   }
 
   if (endSlot) {
-    whereConditions.push('slot <= {endSlot:UInt64}');
-    queryParams.endSlot = endSlot;
+    whereConditions.push(`slot <= ${endSlot}`);
   }
 
   const whereClause = whereConditions.length > 0 
@@ -264,9 +239,8 @@ export async function searchTransactions(params: {
         FROM transactions
         ${whereClause}
         ORDER BY slot DESC
-        LIMIT {limit:UInt32}
+        LIMIT ${limit}
       `,
-      query_params: queryParams,
       format: 'JSONEachRow',
     });
 

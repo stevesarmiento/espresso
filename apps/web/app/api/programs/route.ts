@@ -21,9 +21,10 @@ export async function GET(request: NextRequest) {
 
   try {
     const searchParams = request.nextUrl.searchParams;
+    const limitParam = searchParams.get('limit');
     const params = programSearchSchema.parse({
       range: searchParams.get('range') || '24h',
-      limit: searchParams.get('limit'),
+      limit: limitParam ? parseInt(limitParam) : undefined,
     });
 
     const programs = await getTopPrograms(params.range, params.limit);

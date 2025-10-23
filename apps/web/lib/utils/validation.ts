@@ -1,12 +1,15 @@
 import { z } from 'zod';
 
-// Base58 regex pattern for Solana addresses
-const BASE58_REGEX = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+// Hex regex pattern for program IDs (as stored in ClickHouse)
+const HEX_REGEX = /^[0-9A-F]{64}$/i;
+
+// Base58 regex pattern for Solana signatures
+const BASE58_REGEX = /^[1-9A-HJ-NP-Za-km-z]{32,88}$/;
 
 export const programIdSchema = z
   .string()
-  .regex(BASE58_REGEX, 'Invalid program ID format')
-  .length(44, 'Program ID must be 44 characters');
+  .regex(HEX_REGEX, 'Invalid program ID format')
+  .length(64, 'Program ID must be 64 hex characters');
 
 export const signatureSchema = z
   .string()
@@ -29,7 +32,7 @@ export const paginationSchema = z.object({
 
 export const programSearchSchema = z.object({
   range: timeRangeSchema.default('24h'),
-  limit: z.coerce.number().int().positive().max(100).optional(),
+  limit: z.number().int().positive().max(100).optional(),
 });
 
 export const transactionSearchSchema = z.object({

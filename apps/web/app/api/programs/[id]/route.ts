@@ -23,8 +23,9 @@ export async function GET(
   }
 
   try {
-    // Validate program ID
-    const programId = programIdSchema.parse(params.id);
+    // Normalize and validate program ID (uppercase hex)
+    const normalizedId = params.id.toUpperCase();
+    const programId = programIdSchema.parse(normalizedId);
     
     const searchParams = request.nextUrl.searchParams;
     const timeRange = timeRangeSchema.catch('7d').parse(searchParams.get('range'));

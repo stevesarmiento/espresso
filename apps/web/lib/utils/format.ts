@@ -1,6 +1,9 @@
 import { format, formatDistanceToNow, parseISO } from 'date-fns';
 
-export function formatNumber(num: number, decimals: number = 2): string {
+export function formatNumber(num: number | null | undefined, decimals: number = 2): string {
+  if (num === null || num === undefined || isNaN(num)) {
+    return '0';
+  }
   if (num >= 1_000_000_000) {
     return `${(num / 1_000_000_000).toFixed(decimals)}B`;
   }
@@ -13,7 +16,10 @@ export function formatNumber(num: number, decimals: number = 2): string {
   return num.toFixed(decimals);
 }
 
-export function formatLargeNumber(num: number): string {
+export function formatLargeNumber(num: number | null | undefined): string {
+  if (num === null || num === undefined || isNaN(num)) {
+    return '0';
+  }
   return new Intl.NumberFormat('en-US').format(num);
 }
 
@@ -63,7 +69,7 @@ export function formatSignature(signature: string, length: number = 8): string {
   return `${signature.slice(0, length)}...${signature.slice(-length)}`;
 }
 
-export function formatProgramId(programId: string, length: number = 8): string {
+export function formatProgramId(programId: string, length: number = 12): string {
   if (programId.length <= length * 2) return programId;
   return `${programId.slice(0, length)}...${programId.slice(-length)}`;
 }
