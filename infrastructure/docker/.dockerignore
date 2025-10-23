@@ -1,0 +1,41 @@
+# Node
+node_modules
+npm-debug.log
+.next
+.turbo
+out
+dist
+
+# Rust
+target
+**/*.rs.bk
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Environment
+.env*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs
+*.log
+
+# Documentation
+*.md
+docs/
+
+# CI/CD
+.github
+

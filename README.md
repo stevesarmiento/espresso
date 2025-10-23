@@ -1,223 +1,171 @@
-# Jetstreamer
+# Solana Analytics Platform
 
-[![Crates.io](https://img.shields.io/crates/v/jetstreamer.svg)](https://crates.io/crates/jetstreamer)
-[![Docs.rs](https://docs.rs/jetstreamer/badge.svg)](https://docs.rs/jetstreamer)
-[![CI](https://github.com/anza-xyz/jetstreamer/actions/workflows/rust.yaml/badge.svg)](https://github.com/anza-xyz/jetstreamer/actions/workflows/rust.yaml)
+A community-facing analytics platform for Solana blockchain data, powered by Jetstreamer.
 
-## Overview
+## 🏗️ Architecture
 
-Jetstreamer is a high-throughput Solana backfilling and research toolkit designed to stream
-historical chain data live over the network from Project Yellowstone's [Old
-Faithful](https://old-faithful.net/) archive, which is a comprehensive open source archive of
-all Solana blocks and transactions from genesis to the current tip of the chain. Given the
-right hardware and network connection, Jetstreamer can stream data at over 2.7M TPS to a local
-Jetstreamer plugin or geyser plugin. Higher speeds are possible with better hardware (in our
-case 64 core CPU, 30 Gbps+ network for the 2.7M TPS record).
+This monorepo contains:
 
-Jetstreamer exposes three companion crates:
+- **`apps/web`** - Next.js frontend for the community-facing analytics dashboard
+- **`apps/streamer`** - Jetstreamer backend (Rust) for real-time blockchain data ingestion
+- **`packages/types`** - Shared TypeScript types
+- **`packages/config`** - Shared configuration (ESLint, TypeScript)
+- **`infrastructure`** - Docker configurations and deployment files
+- **`docs`** - Comprehensive documentation
 
-- `jetstreamer` – the primary facade that wires firehose ingestion into your plugins through
-  `JetstreamerRunner`.
-- `jetstreamer-firehose` – async helpers for downloading, compacting, and replaying Old
-  Faithful CAR archives at scale.
-- `jetstreamer-plugin` – a trait-based framework for building structured observers with
-  ClickHouse-friendly batching and runtime metrics.
-- `jetstreamer-utils` - utils used by the Jetstreamer ecosystem.
+## 🚀 Quick Start
 
-Every crate ships with rich module-level documentation and runnable examples. Visit
-[docs.rs/jetstreamer](https://docs.rs/jetstreamer) to explore the API surface in detail.
+### Prerequisites
 
-All 3 sub-crates are provided as re-exports within the main `jetstreamer` crate via the
-following re-exports:
-- `jetstreamer::firehose`
-- `jetstreamer::plugin`
-- `jetstreamer::utils`
+- Node.js 20+
+- Rust 1.75+
+- pnpm 8+
+- **ClickHouse** (choose one):
+  - Docker Desktop (for local development)
+  - [ClickHouse Cloud](https://clickhouse.cloud) (free tier available)
+  - Railway/hosted instance
 
-## Limitations
+### Local Development
 
-While Jetstreamer is able to play back all blocks, transactions, epochs, and rewards in the
-history of Solana mainnet, it is limited by what is in Old Faithful. Old Faithful does not
-contain account updates, so Jetstreamer at the moment also does not have account updates or
-transaction logs, though we plan to eventually have a separate project that provides this, stay
-tuned!
+1. **Clone the repository**
+   ```bash
+   git clone <your-repo>
+   cd solana-analytics-platform
+   ```
 
-It is worth noting that the way Old Faithful and thus Jetstreamer stores transactions, they are
-stored in their "already-executed" state as they originally appeared to Geyser when they were
-first executed. Thus while Jetstreamer can replay ledger data, it is not executing transactions
-directly, and when we say 2.7M TPS, we mean "2.7M transactions processed by a Jetstreamer or
-Geyser plugin locally, streamed over the internet from the Old Faithful archive."
+2. **Install dependencies**
+   ```bash
+   pnpm install
+   ```
 
-## Quick Start
+3. **Set up environment variables**
+   ```bash
+   cp .env.example .env.local
+   # Edit .env.local with your ClickHouse credentials
+   ```
 
-To get an idea of what Jetstreamer is capable of, you can try out the demo CLI that runs
-Jetstreamer Runner with the Program Tracking plugin enabled:
+4. **Set up ClickHouse**
+   
+   **Option A: Local with Docker**
+   ```bash
+   cd infrastructure/docker
+   docker compose up -d clickhouse
+   cd ../..
+   ```
+   
+   **Option B: ClickHouse Cloud** (no Docker needed)
+   ```bash
+   # Sign up at https://clickhouse.cloud
+   # Create a free tier service
+   # Update apps/web/.env.local with your connection details
+   ```
+   
+   **Option C: Railway**
+   ```bash
+   railway add
+   # Select ClickHouse, then update .env.local with connection details
+   ```
 
-### Jetstreamer Runner CLI
+5. **Start the Jetstreamer backend**
+   ```bash
+   pnpm start:streamer
+   ```
 
+6. **Start the Next.js frontend** (in a new terminal)
+   ```bash
+   pnpm dev
+   ```
+
+7. **Open your browser**
+   ```
+   http://localhost:3000
+   ```
+
+## 📁 Project Structure
+
+```
+.
+├── apps/
+│   ├── web/                    # Next.js frontend
+│   │   ├── app/               # App Router pages & API routes
+│   │   ├── components/        # React components
+│   │   ├── lib/               # Utilities & ClickHouse client
+│   │   ├── hooks/             # Custom React hooks
+│   │   └── types/             # TypeScript types
+│   └── streamer/              # Jetstreamer (Rust)
+│       ├── jetstreamer-firehose/
+│       ├── jetstreamer-plugin/
+│       ├── jetstreamer-utils/
+│       └── src/
+├── packages/
+│   ├── types/                 # Shared TypeScript types
+│   └── config/                # Shared configs
+├── infrastructure/
+│   └── docker/                # Docker configs
+├── docs/                      # Documentation
+└── scripts/                   # Helper scripts
+```
+
+## 🛠️ Development
+
+### Available Scripts
+
+- `pnpm dev` - Start Next.js dev server
+- `pnpm build` - Build all packages
+- `pnpm build:web` - Build Next.js app
+- `pnpm build:streamer` - Build Rust streamer
+- `pnpm lint` - Run linters
+- `pnpm type-check` - TypeScript type checking
+
+### Tech Stack
+
+**Frontend:**
+- Next.js 14 (App Router)
+- React 18
+- TypeScript
+- Tailwind CSS
+- Shadcn UI
+- TanStack Query
+- Recharts
+
+**Backend:**
+- Rust
+- Jetstreamer
+- ClickHouse
+
+## 🚢 Deployment
+
+### Frontend (Vercel)
 ```bash
-# Replay all transactions in epoch 800, using 8 HTTP multiplexing cores.
-JETSTREAMER_THREADS=8 cargo run --release -- 800
-
-# Do the same but for slots 358560000 through 367631999, which is epoch 830-850 (slot ranges can be cross-epoch!)
-JETSTREAMER_THREADS=8 cargo run --release -- 358560000:367631999
+cd apps/web
+vercel deploy
 ```
 
-The CLI accepts either `<start>:<end>` slot ranges or a single epoch on the command line. See
-[`JetstreamerRunner::parse_cli_args`](https://docs.rs/jetstreamer/latest/jetstreamer/fn.parse_cli_args.html)
-for the precise rules.
-
-### ClickHouse Integration
-
-Jetstreamer Runner has a built-in ClickHouse integration (by default a clickhouse server is
-spawned running out of the `bin` directory in the repo)
-
-To manage the ClickHouse integration with ease, the following bundled Cargo aliases are
-provided when within the `jetstreamer` workspace:
-
+### Backend (Railway)
 ```bash
-cargo clickhouse-server
-cargo clickhouse-client
+railway up
 ```
 
-`cargo clickhouse-server` launches the same ClickHouse binary that Jetstreamer Runner spawns in
-`bin/`, while `cargo clickhouse-client` connects to the local instance so you can inspect
-tables populated by the runner or plugin runner.
+See [DEPLOYMENT.md](./docs/DEPLOYMENT.md) for detailed deployment instructions.
 
-While Jetstreamer is running, you can use `cargo clickhouse-client` to connect directly to the
-ClickHouse instance that Jetstreamer has spawned. If you want to access data after a run has
-finished, you can run `cargo clickhouse-server` to bring up that server again using the data
-that is currently in the `bin` directory. It is also possible to copy a `bin` directory from
-one system to another as a way of migrating data.
+## 📖 Documentation
 
-### Writing Jetstreamer Plugins
+- [API Documentation](./docs/API.md)
+- [Architecture Overview](./docs/ARCHITECTURE.md)
+- [Development Guide](./docs/DEVELOPMENT.md)
+- [Deployment Guide](./docs/DEPLOYMENT.md)
 
-Jetstreamer Plugins are plugins that can be run by the Jetstreamer Runner.
+## 🤝 Contributing
 
-Implement the `Plugin` trait to observe epoch/block/transaction/reward/entry events. The
-example below mirrors the crate-level documentation and demonstrates how to react to both
-transactions and blocks.
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-Note that Jetstreamer's firehose and underlying interface emits events for leader-skipped
-blocks, unlike traditional geyser.
+## 📄 License
 
-Also note that because Jetstreamer spawns parallel threads that process different subranges of
-the overall slot range at the same time, while each thread sees a purely sequential view of
-transactions, downstream services such as databases that consume this data will see writes in a
-fairly arbitrary order, so you should design your database tables and shared data structures
-accordingly.
+MIT License - see LICENSE file for details
 
-```rust
-use std::sync::Arc;
+## 🔗 Links
 
-use clickhouse::Client;
-use jetstreamer::{
-    JetstreamerRunner,
-    firehose::firehose::{BlockData, TransactionData},
-    firehose::epochs,
-    plugin::{Plugin, PluginFuture},
-};
+- [Jetstreamer Documentation](./apps/streamer/README.md)
+- [Next.js Documentation](https://nextjs.org/docs)
+- [ClickHouse Documentation](https://clickhouse.com/docs)
 
-struct LoggingPlugin;
-
-impl Plugin for LoggingPlugin {
-    fn name(&self) -> &'static str {
-        "logging"
-    }
-
-    fn on_transaction<'a>(
-        &'a self,
-        _thread_id: usize,
-        _db: Option<Arc<Client>>,
-        tx: &'a TransactionData,
-    ) -> PluginFuture<'a> {
-        Box::pin(async move {
-            println!("tx {} landed in slot {}", tx.signature, tx.slot);
-            Ok(())
-        })
-    }
-
-    fn on_block<'a>(
-        &'a self,
-        _thread_id: usize,
-        _db: Option<Arc<Client>>,
-        block: &'a BlockData,
-    ) -> PluginFuture<'a> {
-        Box::pin(async move {
-            if block.was_skipped() {
-                println!("slot {} was skipped", block.slot());
-            } else {
-                println!("processed block at slot {}", block.slot());
-            }
-            Ok(())
-        })
-    }
-}
-
-let (start_slot, end_inclusive) = epochs::epoch_to_slot_range(800);
-
-JetstreamerRunner::new()
-    .with_plugin(Box::new(LoggingPlugin))
-    .with_threads(4)
-    .with_slot_range_bounds(start_slot, end_inclusive + 1)
-    .with_clickhouse_dsn("https://clickhouse.example.com")
-    .run()
-    .expect("runner completed");
-```
-
-If you prefer to configure Jetstreamer via the command line, keep using
-`JetstreamerRunner::parse_cli_args` to hydrate the runner from process arguments and
-environment variables.
-
-When `JETSTREAMER_CLICKHOUSE_MODE` is `auto` (the default), Jetstreamer inspects the DSN to
-decide whether to launch the bundled ClickHouse helper or connect to an external cluster.
-
-#### Batching ClickHouse Writes
-
-ClickHouse (and anything you do in your callbacks) applies backpressure that will slow down
-Jetstreamer if not kept in check.
-
-When implementing a Jetstreamer plugin, prefer buffering records locally and flushing them in
-periodic batches rather than writing on every hook invocation. The runner's built-in stats
-pulses are emitted every 100 slots by default (`jetstreamer-plugin/src/lib.rs`), which strikes
-a balance between timely metrics and avoiding tight write loops. The bundled Program Tracking
-plugin follows this model: each worker thread accumulates its desired `ProgramEvent` rows in a
-`Vec` and performs a single batch insert once 1,000 slots have elapsed
-(`jetstreamer-plugin/src/plugins/program_tracking.rs`). Structuring custom plugins with a
-similar cadence keeps ClickHouse responsive during high throughput replays.
-
-### Firehose
-
-For direct access to the stream of transactions/blocks/rewards etc, you can use the `firehose`
-interface, which allows you to specify a number of async function callbacks that will receive
-transaction/block/reward/etc data on multiple threads in parallel.
-
-## Epoch Feature Availability
-
-Old Faithful ledger snapshots vary in what metadata is available, because Solana as a
-blockchain has evolved significantly over time. Use the table below to decide which epochs fit
-your needs. In particular, note that early versions of the chain are no longer compatible with
-modern geyser but _do_ work with the current `firehose` interface and `JetstreamerRunner`.
-Furthermore, CU tracking was not always available historically so it is not available once you
-go back far enough.
-
-| Epoch | Slot        | Comment |
-|-------|-------------|--------------------------------------------------|
-| 0-156 | 0-?         | Incompatible with modern Geyser plugins |
-| 157+  | ?           | Compatible with modern Geyser plugins |
-| 0-449 | 0-194184610 | CU tracking not available (reported as 0)        |
-| 450+  | 194184611+  | CU tracking available                            |
-
-Epochs at or above 157 are compatible with the current Geyser plugin interface, while compute
-unit accounting first appears at epoch 450. Plan replay windows accordingly.
-
-## Developing Locally
-
-- Format and lint: `cargo fmt --all` and `cargo clippy --workspace`.
-- Run tests: `cargo test --workspace`.
-- Regenerate docs: `cargo doc --workspace --open`.
-
-## Community
-
-Questions, issues, and contributions are welcome! Open a discussion or pull request on
-[GitHub](https://github.com/anza-xyz/jetstreamer) and join the effort to build faster Solana
-analytics pipelines.
